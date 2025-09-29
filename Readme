@@ -1,0 +1,116 @@
+Transformer Lightning Impulse Fault Classification (MEE9X02)
+Author: Mncedisi Luthuli (225251946)  
+Degree: Master’s in Electrical & Electronics Engineering (Coursework)  
+Module: Minor Dissertation — MEE9X02
+This repository contains a MATLAB pipeline for feature extraction, visualization, class balancing, model training, and evaluation of transformer lightning impulse (LI) test data. It ingests factory/measurement spreadsheets (TX*.xlsx), extracts IEC-aligned waveform features, produces robust averaged overlays and metrics, and trains SVM, Random Forest, and a compact CNN with hold-out and 5-fold cross-validation.
+1) Quick Start
+1.	Set the data folder in the script:
+folder = 'C:\Users\Mnced\OneDrive\Documents\MATLAB';
+2.	Ensure your LI Excel files are named like TX*.xlsx and placed in folder.
+3.	Open the script in MATLAB and Run.
+4.	Check the console for:
+⦁	'Features saved to: ...\Features_Table_Final.xlsx'
+⦁	Printed metric tables for hold-out and 5-fold CV.
+5.	Review generated figures (confusion charts, ROC curves, bar plots, feature importance, and average overlays).
+2) Data Requirements
+Each TX*.xlsx should include:
+Columns (minimum):
+⦁	Time, Unit
+⦁	Phase-specific voltage & current columns:
+Phase A:
+Voltage_60_1, Current_60_1
+Voltage_100_1, Voltage_100_2, Voltage_100_3
+Current_100_1, Current_100_2, Current_100_3
+Label column: Fault_Condition_A_phase
+Phase B:
+Voltage_60_2, Current_60_2
+Voltage_100_1_2, Voltage_100_2_2, Voltage_100_3_2
+Current_100_1_2, Current_100_2_2, Current_100_3_2
+Label column: Fault_Condition_B_phase
+Phase C:
+Voltage_60_3, Current_60_3
+Voltage_100_1_3, Voltage_100_2_3, Voltage_100_3_3
+Current_100_1_3, Current_100_2_3, Current_100_3_3
+Label column: Fault_Condition_C_phase
+Labels must be 'Good' or 'Fault' (first row used). Numeric strings and missing values are handled (linear interpolation with endpoint filling).
+3) What the Script Does
+Feature Extraction (per file × phase × waveform):
+⦁	T1_voltage (front time ~10–90%)
+⦁	T2_voltage (time from peak to 50% on tail)
+⦁	Vp_voltage (peak voltage)
+⦁	Ip_current (peak |current|)
+⦁	Beta_voltage = T1/T2
+Feature Table Output:
+⦁	Table T with columns: File, Unit, Phase, WaveType, Label, T1_voltage, T2_voltage, Vp_voltage, Ip_current, Beta_voltage
+⦁	Saved to Features_Table_Final.xlsx in folder
+Waveform Overlays:
+⦁	Normalizes V/I, aligns time bases, plots Healthy vs Faulty mean ± std shading for each Phase (A/B/C) and WaveType (60, 100_1, 100_2, 100_3)
+⦁	Marks average T1 (:) and T2 (--) for Healthy/Faulty (green/red)
+Modeling:
+⦁	Train/Test Split: 80/20 hold-out with rng(42)
+⦁	Balancing: random oversampling (training only)
+⦁	Models: Linear SVM (BoxConstraint optimized), Random Forest (Bagging, with cost matrix), compact CNN
+⦁	Evaluation: Confusion charts + metrics (Accuracy, Precision, Recall, F1, MCC), ROC curves with AUC
+Cross-Validation:
+⦁	Stratified 5-fold CV with oversampling in training folds
+⦁	Produces averaged metric table + grouped bar chart
+4) Outputs & Figures
+Files:
+⦁	Features_Table_Final.xlsx — final feature table for downstream analysis
+Figures (examples):
+⦁	Phase A/B/C - Average Overlays (2×2 tiled per phase)
+⦁	Confusionchart - SVM/RF/CNN (HoldOut)
+⦁	ROC Curves - HoldOut Set (SVM, RF, CNN)
+⦁	Model Performance Comparison (HoldOut) — grouped bars
+⦁	Feature Importance - Random Forest / Linear SVM
+⦁	Model Performance Comparison (5-Fold CV) — grouped bars
+Tip: Use 'Save As…' in each figure window to export publication-quality images (PNG/TIFF/PDF) at your desired DPI.
+5) Software Requirements
+⦁	MATLAB R2021b+ (recommended R2023a or newer)
+⦁	Toolboxes:
+⦁	Statistics and Machine Learning Toolbox
+⦁	Deep Learning Toolbox
+⦁	Optional: Parallel Computing Toolbox (disabled by default in this script)
+6) Reproducibility & Configuration
+⦁	Random seed: rng(42)
+⦁	Data path: edit the 'folder' variable to your dataset path
+⦁	Class names: exactly 'Good' and 'Fault'
+⦁	Cost-sensitive RF: uses [0 1; 5 0] to penalize false negatives more heavily (tune as needed)
+7) Method Notes (Feature Definitions)
+⦁	T1 (Front Time): time between 10% and 90% of the normalized front
+⦁	T2 (Tail Time): time from voltage peak to the instant the tail decays to 50% of Vp
+⦁	β (Beta): T1/T2, a compact front-to-tail shape descriptor
+⦁	Vp / Ip: peak voltage (after baseline shift) / peak absolute current
+Implementation details: robust filling, baseline removal (first 2%), normalization, and safeguards against NaNs/flat signals.
+8) How To Cite / Acknowledge
+⦁	Cite your dissertation and any standards or literature used.
+⦁	For LI parameter definitions and testing context, cite IEC 60060 series and transformer test standards as referenced in your dissertation.
+9) Troubleshooting
+Variable not found warnings:
+⦁	Ensure spreadsheets use exact column names listed in Data Requirements.
+No features saved / empty table:
+⦁	Verify columns contain numeric content; strings are converted automatically. Ensure columns are not entirely missing/NaN.
+CNN training slow:
+⦁	Reduce MaxEpochs (e.g., 15–20) or increase MiniBatchSize. Use GPU if available.
+Class imbalance still visible on test results:
+⦁	Oversampling is only applied to training. Consider threshold tuning, costs, or alternative resampling strategies.
+AUC not plotted for a model:
+⦁	The code locates the 'Fault' score column explicitly. If class order shifts, a warning is emitted.
+10) Extending the Pipeline
+⦁	Add features (overshoot, oscillation index, front steepness)
+⦁	Try alternative classifiers (e.g., XGBoost via MATLAB add-ons)
+⦁	Threshold sweeps to optimize Fault recall at fixed false-alarm rates
+⦁	Log outputs to a results/ directory with timestamped subfolders
+11) Repository Structure (suggested)
+/ (project root)
+├─ README.md
+├─ li_pipeline.m                 % main script
+├─ /data/                        % optional: link/point to OneDrive data folder
+└─ /figures/                     % optional: saved plots
+12) License
+This code is intended for academic research associated with the MEE9X02 minor dissertation.
+If you plan to reuse or distribute beyond the dissertation scope, add a suitable open-source license (e.g., MIT)
+or restrict distribution as required by your institution.
+Contact
+Contact
+For questions or improvements, update the script comments or open a discussion in your version control platform of choice.
